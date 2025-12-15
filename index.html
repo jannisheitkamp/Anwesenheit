@@ -401,7 +401,7 @@
         supabase.auth.signInWithOtp({
           email: email,
           options: {
-            emailRedirectTo: window.location.origin
+            emailRedirectTo: "https://jannisheitkamp.github.io/Anwesenheit/"
           }
         }).then(function(result) {
           if (result.error) {
