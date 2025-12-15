@@ -283,8 +283,8 @@
     <!-- Login -->
     <div id="auth-login" class="card">
       <h2 style="margin-top: 0;">Anmelden</h2>
-      <input id="login-email" type="email" placeholder="E-Mail" />
-      <input id="login-password" type="password" placeholder="Passwort" />
+      <input id="login-email" type="email" placeholder="E-Mail" autocomplete="email" />
+      <input id="login-password" type="password" placeholder="Passwort" autocomplete="current-password" />
       <button id="btn-login" class="btn-primary">🔐 Anmelden</button>
       <button id="btn-show-signup" class="link-button">Noch kein Account? Registrieren</button>
       <div id="login-message"></div>
@@ -293,8 +293,8 @@
     <!-- Registrierung -->
     <div id="auth-signup" class="card" style="display:none;">
       <h2 style="margin-top: 0;">Registrieren</h2>
-      <input id="signup-email" type="email" placeholder="E-Mail" />
-      <input id="signup-password" type="password" placeholder="Passwort (min. 6 Zeichen)" />
+      <input id="signup-email" type="email" placeholder="E-Mail" autocomplete="email" />
+      <input id="signup-password" type="password" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" />
       <input id="signup-name" type="text" placeholder="Dein Name" />
       <button id="btn-signup" class="btn-primary">📝 Registrieren</button>
       <button id="btn-show-login" class="link-button">Zurück zum Login</button>
@@ -421,15 +421,20 @@
           return;
         }
 
+        messageEl.innerHTML = '<div class="message">⏳ Anmeldung läuft...</div>';
+
         supabase.auth.signInWithPassword({
           email: email,
           password: password
         }).then(function(result) {
+          console.log("Login Result:", result);
           if (result.error) {
             messageEl.innerHTML = '<div class="message error">❌ Fehler: ' + result.error.message + '</div>';
           } else {
             messageEl.innerHTML = '<div class="message success">✅ Erfolgreich angemeldet!</div>';
-            setTimeout(checkUser, 500);
+            setTimeout(function() {
+              checkUser();
+            }, 500);
           }
         });
       }
@@ -451,36 +456,75 @@
           return;
         }
 
+        messageEl.innerHTML = '<div class="message">⏳ Registrierung läuft...</div>';
+
         supabase.auth.signUp({
           email: email,
-          password: password
+          password: password,
+          options: {
+             {
+              full_name: name
+            }
+          }
         }).then(function(result) {
+          console.log("Signup Result:", result);
+          
           if (result.error) {
             messageEl.innerHTML = '<div class="message error">❌ Fehler: ' + result.error.message + '</div>';
-          } else {
-            // Profil erstellen
-            supabase.from("profiles").insert({
-              id: result.data.user.id,
-              full_name: name
-            }).then(function(profileResult) {
-              if (profileResult.error) {
-                console.log("Profil-Fehler:", profileResult.error);
-              }
-              messageEl.innerHTML = '<div class="message success">✅ Erfolgreich registriert! Du wirst angemeldet...</div>';
-              setTimeout(checkUser, 1000);
-            });
+            return;
           }
+
+          if (!result.data.user) {
+            messageEl.innerHTML = '<div class="message error">❌ Registrierung fehlgeschlagen</div>';
+            return;
+          }
+
+          // Profil erstellen
+          var userId = result.data.user.id;
+          console.log("Erstelle Profil für User:", userId);
+
+          supabase.from("profiles").upsert({
+            id: userId,
+            full_name: name.trim()
+          }).then(function(profileResult) {
+            console.log("Profil Result:", profileResult);
+            
+            if (profileResult.error) {
+              console.error("Profil-Fehler:", profileResult.error);
+              showDebug("Warnung: Profil konnte nicht erstellt werden: " + profileResult.error.message, true);
+            }
+
+            // Prüfe ob Email-Bestätigung erforderlich ist
+            if (result.data.session) {
+              messageEl.innerHTML = '<div class="message success">✅ Erfolgreich registriert!</div>';
+              setTimeout(function() {
+                checkUser();
+              }, 1000);
+            } else {
+              messageEl.innerHTML = '<div class="message success">✅ Registriert! Bitte bestätige deine E-Mail und melde dich dann an.</div>';
+              setTimeout(function() {
+                showLogin();
+              }, 3000);
+            }
+          });
         });
       }
 
       function showSignup() {
         document.getElementById("auth-login").style.display = "none";
         document.getElementById("auth-signup").style.display = "block";
+        document.getElementById("signup-email").value = "";
+        document.getElementById("signup-password").value = "";
+        document.getElementById("signup-name").value = "";
+        document.getElementById("signup-message").innerHTML = "";
       }
 
       function showLogin() {
         document.getElementById("auth-signup").style.display = "none";
         document.getElementById("auth-login").style.display = "block";
+        document.getElementById("login-email").value = "";
+        document.getElementById("login-password").value = "";
+        document.getElementById("login-message").innerHTML = "";
       }
 
       function signOut() {
@@ -488,25 +532,32 @@
           if (result.error) {
             alert("Fehler: " + result.error.message);
           } else {
-            location.reload();
+            showLogin();
           }
         });
       }
 
       function checkUser() {
-        supabase.auth.getUser().then(function(userResult) {
-          if (userResult.data.user) {
+        console.log("=== checkUser gestartet ===");
+        
+        supabase.auth.getSession().then(function(sessionResult) {
+          console.log("Session Result:", sessionResult);
+          
+          if (sessionResult.data.session && sessionResult.data.session.user) {
+            var user = sessionResult.data.session.user;
+            console.log("User gefunden:", user.email);
+            
             document.getElementById("auth-login").style.display = "none";
             document.getElementById("auth-signup").style.display = "none";
             document.getElementById("app").style.display = "block";
-            document.getElementById("user-email").innerText = userResult.data.user.email;
-            showDebug("Eingeloggt als: " + userResult.data.user.email);
+            document.getElementById("user-email").innerText = user.email;
+            showDebug("Eingeloggt als: " + user.email);
+            
             loadProfile();
             loadStatus();
           } else {
-            document.getElementById("auth-login").style.display = "block";
-            document.getElementById("auth-signup").style.display = "none";
-            document.getElementById("app").style.display = "none";
+            console.log("Keine Session gefunden");
+            showLogin();
           }
         });
       }
@@ -517,6 +568,7 @@
           if (!user) return;
 
           supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then(function(result) {
+            console.log("Profil geladen:", result);
             var name = result.data ? result.data.full_name : "Nicht gesetzt";
             document.getElementById("display-name").innerText = name;
           });
@@ -657,7 +709,6 @@
       document.getElementById("btn-test").addEventListener("click", testConnection);
       document.getElementById("btn-debug").addEventListener("click", toggleDebug);
 
-      // Enter-Taste für Login
       document.getElementById("login-email").addEventListener("keypress", function(e) {
         if (e.key === "Enter") {
           document.getElementById("login-password").focus();
@@ -671,6 +722,7 @@
       });
 
       supabase.auth.onAuthStateChange(function(event, session) {
+        console.log("Auth State Change:", event, session);
         if (event === 'SIGNED_IN') {
           checkUser();
         } else if (event === 'SIGNED_OUT') {
@@ -678,7 +730,10 @@
         }
       });
 
+      // Initial Check beim Laden
       checkUser();
+      
+      // Automatisches Neuladen
       setInterval(loadStatus, 30000);
     })();
   </script>
