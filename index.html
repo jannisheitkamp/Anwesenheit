@@ -93,10 +93,6 @@
       color: white;
     }
 
-    .btn-primary:hover {
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
     .btn-success {
       background: #10b981;
       color: white;
@@ -235,24 +231,6 @@
       opacity: 0.5;
     }
 
-    .install-prompt {
-      background: #dbeafe;
-      color: #1e40af;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .install-prompt button {
-      flex-shrink: 0;
-      width: auto;
-      padding: 8px 16px;
-      font-size: 14px;
-    }
-
     .link-button {
       background: none;
       border: none;
@@ -275,16 +253,11 @@
   <div class="container">
     <h1>📍 Anwesenheit</h1>
 
-    <div id="install-prompt" class="install-prompt">
-      <span>📱 Installiere die App auf deinem Handy!</span>
-      <button id="btn-install" class="btn-primary">Installieren</button>
-    </div>
-
     <!-- Login -->
     <div id="auth-login" class="card">
       <h2 style="margin-top: 0;">Anmelden</h2>
-      <input id="login-email" type="email" placeholder="E-Mail" autocomplete="email" />
-      <input id="login-password" type="password" placeholder="Passwort" autocomplete="current-password" />
+      <input id="login-email" type="email" placeholder="E-Mail" />
+      <input id="login-password" type="password" placeholder="Passwort" />
       <button id="btn-login" class="btn-primary">🔐 Anmelden</button>
       <button id="btn-show-signup" class="link-button">Noch kein Account? Registrieren</button>
       <div id="login-message"></div>
@@ -293,8 +266,8 @@
     <!-- Registrierung -->
     <div id="auth-signup" class="card" style="display:none;">
       <h2 style="margin-top: 0;">Registrieren</h2>
-      <input id="signup-email" type="email" placeholder="E-Mail" autocomplete="email" />
-      <input id="signup-password" type="password" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" />
+      <input id="signup-email" type="email" placeholder="E-Mail" />
+      <input id="signup-password" type="password" placeholder="Passwort (min. 6 Zeichen)" />
       <input id="signup-name" type="text" placeholder="Dein Name" />
       <button id="btn-signup" class="btn-primary">📝 Registrieren</button>
       <button id="btn-show-login" class="link-button">Zurück zum Login</button>
@@ -347,26 +320,6 @@
       var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3YmJ4eXh3d2FmanJydnZhbHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3ODc0MTYsImV4cCI6MjA4MTM2MzQxNn0.r47hnIpfLg4zPyNAjW7iERU8ddrupXHg-M1Xi3UGFRw";
 
       var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      var deferredPrompt;
-
-      window.addEventListener('beforeinstallprompt', function(e) {
-        e.preventDefault();
-        deferredPrompt = e;
-        document.getElementById('install-prompt').style.display = 'flex';
-      });
-
-      document.getElementById('btn-install').addEventListener('click', function() {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then(function(choiceResult) {
-            if (choiceResult.outcome === 'accepted') {
-              console.log('App installiert');
-            }
-            deferredPrompt = null;
-            document.getElementById('install-prompt').style.display = 'none';
-          });
-        }
-      });
 
       function toggleDebug() {
         var debugEl = document.getElementById("debug-info");
@@ -401,16 +354,15 @@
           }
 
           supabase.from("status").select("*").then(function(statusResult) {
-            showDebug("Status-Tabelle: " + (statusResult.data ? statusResult.data.length + " Einträge" : "FEHLER: " + (statusResult.error ? statusResult.error.message : "unbekannt")));
+            showDebug("Status-Tabelle: " + (statusResult.data ? statusResult.data.length + " Einträge" : "FEHLER"));
           });
           
           supabase.from("profiles").select("*").then(function(profileResult) {
-            showDebug("Profile-Tabelle: " + (profileResult.data ? profileResult.data.length + " Einträge" : "FEHLER: " + (profileResult.error ? profileResult.error.message : "unbekannt")));
+            showDebug("Profile-Tabelle: " + (profileResult.data ? profileResult.data.length + " Einträge" : "FEHLER"));
           });
         });
       }
 
-      // Login
       function login() {
         var email = document.getElementById("login-email").value;
         var password = document.getElementById("login-password").value;
@@ -421,25 +373,18 @@
           return;
         }
 
-        messageEl.innerHTML = '<div class="message">⏳ Anmeldung läuft...</div>';
-
         supabase.auth.signInWithPassword({
           email: email,
           password: password
         }).then(function(result) {
-          console.log("Login Result:", result);
           if (result.error) {
-            messageEl.innerHTML = '<div class="message error">❌ Fehler: ' + result.error.message + '</div>';
+            messageEl.innerHTML = '<div class="message error">❌ ' + result.error.message + '</div>';
           } else {
-            messageEl.innerHTML = '<div class="message success">✅ Erfolgreich angemeldet!</div>';
-            setTimeout(function() {
-              checkUser();
-            }, 500);
+            checkUser();
           }
         });
       }
 
-      // Registrierung
       function signup() {
         var email = document.getElementById("signup-email").value;
         var password = document.getElementById("signup-password").value;
@@ -456,108 +401,61 @@
           return;
         }
 
-        messageEl.innerHTML = '<div class="message">⏳ Registrierung läuft...</div>';
-
         supabase.auth.signUp({
           email: email,
-          password: password,
-          options: {
-             {
-              full_name: name
-            }
-          }
+          password: password
         }).then(function(result) {
-          console.log("Signup Result:", result);
-          
           if (result.error) {
-            messageEl.innerHTML = '<div class="message error">❌ Fehler: ' + result.error.message + '</div>';
+            messageEl.innerHTML = '<div class="message error">❌ ' + result.error.message + '</div>';
             return;
           }
 
-          if (!result.data.user) {
-            messageEl.innerHTML = '<div class="message error">❌ Registrierung fehlgeschlagen</div>';
-            return;
+          if (result.data.user) {
+            supabase.from("profiles").upsert({
+              id: result.data.user.id,
+              full_name: name.trim()
+            }).then(function() {
+              if (result.data.session) {
+                messageEl.innerHTML = '<div class="message success">✅ Erfolgreich registriert!</div>';
+                setTimeout(checkUser, 500);
+              } else {
+                messageEl.innerHTML = '<div class="message success">✅ Registriert! Bitte melde dich an.</div>';
+                setTimeout(showLogin, 2000);
+              }
+            });
           }
-
-          // Profil erstellen
-          var userId = result.data.user.id;
-          console.log("Erstelle Profil für User:", userId);
-
-          supabase.from("profiles").upsert({
-            id: userId,
-            full_name: name.trim()
-          }).then(function(profileResult) {
-            console.log("Profil Result:", profileResult);
-            
-            if (profileResult.error) {
-              console.error("Profil-Fehler:", profileResult.error);
-              showDebug("Warnung: Profil konnte nicht erstellt werden: " + profileResult.error.message, true);
-            }
-
-            // Prüfe ob Email-Bestätigung erforderlich ist
-            if (result.data.session) {
-              messageEl.innerHTML = '<div class="message success">✅ Erfolgreich registriert!</div>';
-              setTimeout(function() {
-                checkUser();
-              }, 1000);
-            } else {
-              messageEl.innerHTML = '<div class="message success">✅ Registriert! Bitte bestätige deine E-Mail und melde dich dann an.</div>';
-              setTimeout(function() {
-                showLogin();
-              }, 3000);
-            }
-          });
         });
       }
 
       function showSignup() {
         document.getElementById("auth-login").style.display = "none";
         document.getElementById("auth-signup").style.display = "block";
-        document.getElementById("signup-email").value = "";
-        document.getElementById("signup-password").value = "";
-        document.getElementById("signup-name").value = "";
-        document.getElementById("signup-message").innerHTML = "";
       }
 
       function showLogin() {
         document.getElementById("auth-signup").style.display = "none";
         document.getElementById("auth-login").style.display = "block";
-        document.getElementById("login-email").value = "";
-        document.getElementById("login-password").value = "";
-        document.getElementById("login-message").innerHTML = "";
       }
 
       function signOut() {
-        supabase.auth.signOut().then(function(result) {
-          if (result.error) {
-            alert("Fehler: " + result.error.message);
-          } else {
-            showLogin();
-          }
+        supabase.auth.signOut().then(function() {
+          location.reload();
         });
       }
 
       function checkUser() {
-        console.log("=== checkUser gestartet ===");
-        
-        supabase.auth.getSession().then(function(sessionResult) {
-          console.log("Session Result:", sessionResult);
-          
-          if (sessionResult.data.session && sessionResult.data.session.user) {
-            var user = sessionResult.data.session.user;
-            console.log("User gefunden:", user.email);
-            
+        supabase.auth.getUser().then(function(userResult) {
+          if (userResult.data.user) {
             document.getElementById("auth-login").style.display = "none";
             document.getElementById("auth-signup").style.display = "none";
             document.getElementById("app").style.display = "block";
-            document.getElementById("user-email").innerText = user.email;
-            showDebug("Eingeloggt als: " + user.email);
-            
+            document.getElementById("user-email").innerText = userResult.data.user.email;
             loadProfile();
             loadStatus();
           } else {
-            console.log("Keine Session gefunden");
-            showLogin();
+            document.getElementById("auth-login").style.display = "block";
+            document.getElementById("auth-signup").style.display = "none";
+            document.getElementById("app").style.display = "none";
           }
         });
       }
@@ -568,7 +466,6 @@
           if (!user) return;
 
           supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then(function(result) {
-            console.log("Profil geladen:", result);
             var name = result.data ? result.data.full_name : "Nicht gesetzt";
             document.getElementById("display-name").innerText = name;
           });
@@ -589,7 +486,7 @@
             } else {
               document.getElementById("display-name").innerText = name.trim();
               loadStatus();
-              alert("✅ Name wurde geändert!");
+              alert("✅ Name geändert!");
             }
           });
         });
@@ -604,7 +501,6 @@
           }
 
           var status = document.getElementById("status-select").value;
-          showDebug("Speichere Status: " + status);
 
           supabase.from("status").upsert({ 
             user_id: user.id, 
@@ -613,7 +509,6 @@
           }).then(function(result) {
             if (result.error) {
               alert("❌ Fehler: " + result.error.message);
-              showDebug("FEHLER: " + result.error.message, true);
             } else {
               alert("✅ Status gespeichert!");
               loadStatus();
@@ -637,23 +532,19 @@
       }
 
       function loadStatus() {
-        showDebug("Lade Status-Daten...");
-        
         supabase.from("status").select("status, updated_at, user_id").order("updated_at", { ascending: false }).then(function(result) {
           var statusRows = result.data;
           var statusError = result.error;
 
-          showDebug("Status: " + (statusRows ? statusRows.length : 'null') + " Einträge");
-
           if (statusError) { 
-            alert("❌ Fehler beim Laden: " + statusError.message);
+            alert("❌ Fehler beim Laden");
             return; 
           }
 
           var list = document.getElementById("status-list");
 
           if (!statusRows || statusRows.length === 0) {
-            list.innerHTML = '<div class="empty-state"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><p>Noch keine Einträge vorhanden.<br>Speichere deinen ersten Status!</p></div>';
+            list.innerHTML = '<div class="empty-state"><p>Noch keine Einträge vorhanden.</p></div>';
             return;
           }
 
@@ -691,13 +582,10 @@
                              '<span style="color: #9ca3af;">• ' + time + '</span></div>';
               list.appendChild(li);
             }
-
-            showDebug("✓ Liste mit " + statusRows.length + " Einträgen erstellt");
           });
         });
       }
 
-      // Event Listeners
       document.getElementById("btn-login").addEventListener("click", login);
       document.getElementById("btn-signup").addEventListener("click", signup);
       document.getElementById("btn-show-signup").addEventListener("click", showSignup);
@@ -709,34 +597,17 @@
       document.getElementById("btn-test").addEventListener("click", testConnection);
       document.getElementById("btn-debug").addEventListener("click", toggleDebug);
 
-      document.getElementById("login-email").addEventListener("keypress", function(e) {
-        if (e.key === "Enter") {
-          document.getElementById("login-password").focus();
-        }
-      });
-      
       document.getElementById("login-password").addEventListener("keypress", function(e) {
-        if (e.key === "Enter") {
-          login();
-        }
+        if (e.key === "Enter") login();
       });
 
-      supabase.auth.onAuthStateChange(function(event, session) {
-        console.log("Auth State Change:", event, session);
-        if (event === 'SIGNED_IN') {
-          checkUser();
-        } else if (event === 'SIGNED_OUT') {
-          showLogin();
-        }
+      supabase.auth.onAuthStateChange(function(event) {
+        if (event === 'SIGNED_IN') checkUser();
       });
 
-      // Initial Check beim Laden
       checkUser();
-      
-      // Automatisches Neuladen
       setInterval(loadStatus, 30000);
     })();
   </script>
 </body>
 </html>
-
