@@ -4,6 +4,18 @@
   <meta charset="UTF-8" />
   <title>Anwesenheit im Büro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="description" content="Team Anwesenheits-Tracker" />
+  <meta name="theme-color" content="#667eea" />
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  
+  <!-- iOS Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Anwesenheit" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     * {
@@ -226,6 +238,24 @@
       opacity: 0.5;
     }
 
+    .install-prompt {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .install-prompt button {
+      flex-shrink: 0;
+      width: auto;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+
     @media (max-width: 480px) {
       h1 { font-size: 24px; }
       .card { padding: 16px; }
@@ -236,6 +266,12 @@
 <body>
   <div class="container">
     <h1>📍 Anwesenheit</h1>
+
+    <!-- PWA Install Prompt -->
+    <div id="install-prompt" class="install-prompt">
+      <span>📱 Installiere die App auf deinem Handy!</span>
+      <button id="btn-install" class="btn-primary">Installieren</button>
+    </div>
 
     <div id="auth" class="card">
       <p style="margin-bottom: 16px; color: #6b7280;">Melde dich mit deiner E-Mail an:</p>
@@ -289,6 +325,27 @@
       var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3YmJ4eXh3d2FmanJydnZhbHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3ODc0MTYsImV4cCI6MjA4MTM2MzQxNn0.r47hnIpfLg4zPyNAjW7iERU8ddrupXHg-M1Xi3UGFRw";
 
       var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      var deferredPrompt;
+
+      // PWA Install Prompt Handler
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('install-prompt').style.display = 'flex';
+      });
+
+      document.getElementById('btn-install').addEventListener('click', function() {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then(function(choiceResult) {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('App installiert');
+            }
+            deferredPrompt = null;
+            document.getElementById('install-prompt').style.display = 'none';
+          });
+        }
+      });
 
       function toggleDebug() {
         var debugEl = document.getElementById("debug-info");
@@ -437,7 +494,11 @@
           var status = document.getElementById("status-select").value;
           showDebug("Speichere Status: " + status);
 
-          supabase.from("status").upsert({ user_id: user.id, status: status }).then(function(result) {
+          supabase.from("status").upsert({ 
+            user_id: user.id, 
+            status: status,
+            updated_at: new Date().toISOString()
+          }).then(function(result) {
             if (result.error) {
               alert("❌ Fehler: " + result.error.message);
               showDebug("FEHLER: " + result.error.message, true);
@@ -548,5 +609,5 @@
       setInterval(loadStatus, 30000);
     })();
   </script>
-</body>
+</head>
 </html>
