@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Anwesenheit im Büro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 16px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 24px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      color: #333;
+      font-size: 18px;
+      margin: 20px 0 12px 0;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      font-size: 16px;
+      margin-bottom: 12px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+      font-size: 14px;
+      padding: 10px;
+    }
+
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+      font-size: 14px;
+      padding: 10px;
+    }
+
+    .user-info {
+      background: #f3f4f6;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .user-info p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .user-info strong {
+      color: #667eea;
+    }
+
+    .status-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .status-list li {
+      background: #f9fafb;
+      padding: 14px;
+      margin-bottom: 8px;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-name {
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .status-info {
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+
+    .badge-office { background: #d1fae5; color: #065f46; }
+    .badge-home { background: #dbeafe; color: #1e40af; }
+    .badge-service { background: #fef3c7; color: #92400e; }
+    .badge-vacation { background: #fce7f3; color: #9f1239; }
+    .badge-break { background: #e0e7ff; color: #3730a3; }
+    .badge-done { background: #f3f4f6; color: #374151; }
+
+    .message {
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      border-left: 4px solid #10b981;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-left: 4px solid #ef4444;
+    }
+
+    .debug-info {
+      background: #fef3c7;
+      padding: 12px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .debug-info.show {
+      display: block;
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: #6b7280;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 24px; }
+      .card { padding: 16px; }
+      button { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📍 Anwesenheit</h1>
+
+    <div id="auth" class="card">
+      <p style="margin-bottom: 16px; color: #6b7280;">Melde dich mit deiner E-Mail an:</p>
+      <input id="email" type="email" placeholder="deine@email.de" />
+      <button id="btn-signin" class="btn-primary">🔐 Magic Link senden</button>
+      <div id="auth-message"></div>
+    </div>
+
+    <div id="app" style="display:none;">
+      <div class="card">
+        <div class="user-info">
+          <p><strong>👤 Angemeldet als:</strong><br><span id="user-email"></span></p>
+          <p><strong>✏️ Anzeigename:</strong><br><span id="display-name">Lädt...</span></p>
+        </div>
+        
+        <button id="btn-change-name" class="btn-primary">Namen ändern</button>
+        <button id="btn-signout" class="btn-danger">Abmelden</button>
+      </div>
+
+      <div class="card">
+        <h2>📊 Dein Status</h2>
+        <select id="status-select">
+          <option value="im Büro">🏢 im Büro</option>
+          <option value="Homeoffice">🏠 Homeoffice</option>
+          <option value="Außendienst">🚗 Außendienst</option>
+          <option value="Pause">☕ Pause</option>
+          <option value="Feierabend">🌙 Feierabend</option>
+          <option value="Urlaub">🏖️ Urlaub</option>
+        </select>
+        <button id="btn-update-status" class="btn-success">💾 Status speichern</button>
+      </div>
+
+      <div class="card">
+        <h2>👥 Wer ist wo?</h2>
+        <button id="btn-refresh" class="btn-success">🔄 Aktualisieren</button>
+        
+        <div class="btn-group">
+          <button id="btn-test" class="btn-warning">🔧 Test</button>
+          <button id="btn-debug" class="btn-secondary">📋 Debug</button>
+        </div>
+        
+        <div id="debug-info" class="debug-info"></div>
+        <ul id="status-list" class="status-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var SUPABASE_URL = "https://vwbbxyxwwafjrrvvalur.supabase.co";
+      var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3YmJ4eXh3d2FmanJydnZhbHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3ODc0MTYsImV4cCI6MjA4MTM2MzQxNn0.r47hnIpfLg4zPyNAjW7iERU8ddrupXHg-M1Xi3UGFRw";
+
+      var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      function toggleDebug() {
+        var debugEl = document.getElementById("debug-info");
+        if (debugEl.classList.contains("show")) {
+          debugEl.classList.remove("show");
+        } else {
+          debugEl.classList.add("show");
+        }
+      }
+
+      function showDebug(message, isError) {
+        var debugEl = document.getElementById("debug-info");
+        if (debugEl) {
+          var color = isError ? 'color: red; font-weight: bold;' : '';
+          debugEl.innerHTML += '<div style="' + color + '">' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+          debugEl.scrollTop = debugEl.scrollHeight;
+        }
+        console.log("DEBUG:", message);
+      }
+
+      function testConnection() {
+        showDebug("=== VERBINDUNGSTEST GESTARTET ===");
+        document.getElementById("debug-info").classList.add("show");
+        
+        supabase.auth.getUser().then(function(userResult) {
+          var user = userResult.data.user;
+          showDebug("User: " + (user ? user.email : 'NICHT EINGELOGGT'));
+          
+          if (!user) {
+            showDebug("FEHLER: Nicht eingeloggt!", true);
+            return;
+          }
+
+          supabase.from("status").select("*").then(function(statusResult) {
+            showDebug("Status-Tabelle: " + (statusResult.data ? statusResult.data.length + " Einträge" : "FEHLER"));
+          });
+          
+          supabase.from("profiles").select("*").then(function(profileResult) {
+            showDebug("Profile-Tabelle: " + (profileResult.data ? profileResult.data.length + " Einträge" : "FEHLER"));
+          });
+        });
+      }
+
+      function signIn() {
+        var email = document.getElementById("email").value;
+        var messageEl = document.getElementById("auth-message");
+        
+        if (!email) {
+          messageEl.innerHTML = '<div class="message error">❌ Bitte E-Mail eingeben</div>';
+          return;
+        }
+
+        supabase.auth.signInWithOtp({
+          email: email,
+          options: {
+            emailRedirectTo: window.location.origin
+          }
+        }).then(function(result) {
+          if (result.error) {
+            messageEl.innerHTML = '<div class="message error">❌ Fehler: ' + result.error.message + '</div>';
+          } else {
+            messageEl.innerHTML = '<div class="message success">✅ Magic Link wurde gesendet! Prüfe dein Postfach.</div>';
+          }
+        });
+      }
+
+      function signOut() {
+        supabase.auth.signOut().then(function(result) {
+          if (result.error) {
+            alert("Fehler: " + result.error.message);
+          } else {
+            location.reload();
+          }
+        });
+      }
+
+      function checkUser() {
+        supabase.auth.getUser().then(function(userResult) {
+          if (userResult.data.user) {
+            document.getElementById("auth").style.display = "none";
+            document.getElementById("app").style.display = "block";
+            document.getElementById("user-email").innerText = userResult.data.user.email;
+            showDebug("Eingeloggt als: " + userResult.data.user.email);
+            ensureProfile(false);
+            loadStatus();
+          } else {
+            document.getElementById("auth").style.display = "block";
+            document.getElementById("app").style.display = "none";
+          }
+        });
+      }
+
+      function changeName() {
+        supabase.auth.getUser().then(function(userResult) {
+          var user = userResult.data.user;
+          if (!user) return;
+
+          var name = prompt("Wie soll dein Name angezeigt werden?");
+          if (!name || name.trim() === "") return;
+
+          supabase.from("profiles").upsert({ id: user.id, full_name: name.trim() }).then(function(result) {
+            if (result.error) {
+              alert("❌ Fehler: " + result.error.message);
+            } else {
+              document.getElementById("display-name").innerText = name.trim();
+              loadStatus();
+              alert("✅ Name wurde geändert!");
+            }
+          });
+        });
+      }
+
+      function ensureProfile(forceAsk) {
+        supabase.auth.getUser().then(function(userResult) {
+          var user = userResult.data.user;
+          if (!user) return;
+
+          supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then(function(result) {
+            var currentName = result.data ? result.data.full_name : null;
+
+            if (!currentName || forceAsk) {
+              var name = prompt("Wie soll dein Name angezeigt werden?");
+              if (!name || name.trim() === "") return;
+              
+              supabase.from("profiles").upsert({ id: user.id, full_name: name.trim() }).then(function(upsertResult) {
+                if (!upsertResult.error) {
+                  currentName = name.trim();
+                }
+                document.getElementById("display-name").innerText = currentName || "Nicht gesetzt";
+              });
+            } else {
+              document.getElementById("display-name").innerText = currentName || "Nicht gesetzt";
+            }
+          });
+        });
+      }
+
+      function updateStatus() {
+        supabase.auth.getUser().then(function(userResult) {
+          var user = userResult.data.user;
+          if (!user) {
+            alert("❌ Bitte zuerst einloggen.");
+            return;
+          }
+
+          var status = document.getElementById("status-select").value;
+          showDebug("Speichere Status: " + status);
+
+          supabase.from("status").upsert({ user_id: user.id, status: status }).then(function(result) {
+            if (result.error) {
+              alert("❌ Fehler: " + result.error.message);
+              showDebug("FEHLER: " + result.error.message, true);
+            } else {
+              alert("✅ Status gespeichert!");
+              loadStatus();
+            }
+          });
+        });
+      }
+
+      function getStatusBadge(status) {
+        var cleanStatus = status.replace(/[🏢🏠🚗🏖️☕🌙]/g, '').trim();
+        var badgeClass = 'status-badge ';
+        
+        if (cleanStatus === 'im Büro') badgeClass += 'badge-office';
+        else if (cleanStatus === 'Homeoffice') badgeClass += 'badge-home';
+        else if (cleanStatus === 'Außendienst') badgeClass += 'badge-service';
+        else if (cleanStatus === 'Urlaub') badgeClass += 'badge-vacation';
+        else if (cleanStatus === 'Pause') badgeClass += 'badge-break';
+        else if (cleanStatus === 'Feierabend') badgeClass += 'badge-done';
+        
+        return '<span class="' + badgeClass + '">' + status + '</span>';
+      }
+
+      function loadStatus() {
+        showDebug("Lade Status-Daten...");
+        
+        supabase.from("status").select("status, updated_at, user_id").order("updated_at", { ascending: false }).then(function(result) {
+          var statusRows = result.data;
+          var statusError = result.error;
+
+          showDebug("Status: " + (statusRows ? statusRows.length : 'null') + " Einträge");
+
+          if (statusError) { 
+            alert("❌ Fehler beim Laden: " + statusError.message);
+            return; 
+          }
+
+          var list = document.getElementById("status-list");
+
+          if (!statusRows || statusRows.length === 0) {
+            list.innerHTML = '<div class="empty-state"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><p>Noch keine Einträge vorhanden.<br>Speichere deinen ersten Status!</p></div>';
+            return;
+          }
+
+          var userIds = [];
+          for (var i = 0; i < statusRows.length; i++) {
+            if (userIds.indexOf(statusRows[i].user_id) === -1) {
+              userIds.push(statusRows[i].user_id);
+            }
+          }
+
+          supabase.from("profiles").select("id, full_name").in("id", userIds).then(function(profileResult) {
+            var profileRows = profileResult.data;
+
+            var nameById = {};
+            if (profileRows) {
+              for (var i = 0; i < profileRows.length; i++) {
+                nameById[profileRows[i].id] = profileRows[i].full_name || "Unbekannt";
+              }
+            }
+
+            list.innerHTML = "";
+            for (var i = 0; i < statusRows.length; i++) {
+              var row = statusRows[i];
+              var name = nameById[row.user_id] || "Unbekannt";
+              var li = document.createElement("li");
+              var time = new Date(row.updated_at).toLocaleString("de-DE", {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+              
+              li.innerHTML = '<div class="status-name">' + name + '</div>' +
+                             '<div class="status-info">' + getStatusBadge(row.status) + 
+                             '<span style="color: #9ca3af;">• ' + time + '</span></div>';
+              list.appendChild(li);
+            }
+
+            showDebug("✓ Liste mit " + statusRows.length + " Einträgen erstellt");
+          });
+        });
+      }
+
+      document.getElementById("btn-signin").addEventListener("click", signIn);
+      document.getElementById("btn-signout").addEventListener("click", signOut);
+      document.getElementById("btn-change-name").addEventListener("click", changeName);
+      document.getElementById("btn-update-status").addEventListener("click", updateStatus);
+      document.getElementById("btn-refresh").addEventListener("click", loadStatus);
+      document.getElementById("btn-test").addEventListener("click", testConnection);
+      document.getElementById("btn-debug").addEventListener("click", toggleDebug);
+
+      document.getElementById("email").addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+          signIn();
+        }
+      });
+
+      supabase.auth.onAuthStateChange(function(event, session) {
+        if (event === 'SIGNED_IN') {
+          checkUser();
+        }
+      });
+
+      checkUser();
+      setInterval(loadStatus, 30000);
+    })();
+  </script>
+</body>
+</html>
